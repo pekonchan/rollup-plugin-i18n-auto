@@ -1,7 +1,6 @@
 import { parse } from '@babel/parser'
 import traverse from '@babel/traverse'
 import generator from '@babel/generator'
-import { createFilter } from '@rollup/pluginutils';
 
 import {
     transCode,
@@ -10,32 +9,20 @@ import {
 import {
     setConfig,
     setCurrentCompileResourceMap,
-    addCompiledFiles,
-    getKey,
-    getCompileDone,
     globalSetting,
 } from '../common/collect.js'
 
 export default function i18nTransform ({id, code}, options) {
-    const filter = createFilter(options.include, options.exclude);
-    if (!filter(id)) {
-        console.log('🚀 ~ file: index.js:22 ~ i18nTransform ~ id:', id);
-        return;
-    }
-
     const collection = []
     const keyInCodes = []
     let loadedDependency = false
     const {
         name = '',
         alias = [],
-        watch,
         dependency, // {name, value, objectPattern}
         transform = true,
     } = options || {}
     
-    const hasCompiled = getCompileDone()
-    const changeOnce = !watch && hasCompiled
 
     let ast = parse(code, {
         sourceType: 'unambiguous'
@@ -168,9 +155,6 @@ export default function i18nTransform ({id, code}, options) {
                 if (globalSetting.localePattern.test(val)) {
                     const res = localeWordPattern(val)
                     if (res && res.length) {
-                        if (changeOnce && res.some(word => !getKey(word))) {
-                            return
-                        }
                         const wordKeyMap = {}
                         res.forEach(word => {
                             const key = setConfig(word)
@@ -217,7 +201,7 @@ export default function i18nTransform ({id, code}, options) {
     traverse.default(ast, visitor)
 
     // Whether to collect the language to be internationalized
-    const hasLang = collection.length
+    const hasLang = !!collection.length
 
     // If user set the dependency, which wants to import, but now hasn't imported, and has language to be internationalized
     if (transform && dependency && hasLang && !loadedDependency) {
@@ -233,8 +217,6 @@ export default function i18nTransform ({id, code}, options) {
     const newCode = generator.default(ast, {}, code).code
 
     setCurrentCompileResourceMap(id, collection, keyInCodes) // create the latest collection to this file in sourcemap variable
-
-    addCompiledFiles(id)
-
+    
     return newCode
 }

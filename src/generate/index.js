@@ -1,8 +1,6 @@
 import {
     globalSetting,
     getResource,
-    setCompileDone,
-    setCompiledFiles,
     updateResourceMap,
     createConfigbyMap,
     updateConfig,
@@ -10,21 +8,34 @@ import {
 const {
     translate: globalSettingTranslate
 } = globalSetting
-import { createFile } from '../common/utils.js';
+import { createFileWidthPath } from '../common/utils.js';
 import createTranslate from '../translate/index.js';
 import path from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { cwd } from 'node:process';
+import {
+    outDirCreated,
+    setOutDirCreated,
+    wirteTaskTimer,
+    setWirteTaskTimer,
+    mkdiring,
+    setMkdiring,
+    writeTaskStash,
+    pushWriteTaskStash,
+    setWriteTaskStash,
+    hasDirAfterWriteConfigTask,
+    setHasDirAfterWriteConfigTask,
+} from '../common/global.js'
 
-let once = false
 let translating = false
 
 /**
  * Create locale language config
  * @param {Object} output
  */
-const createConfig = (output) => {
+const createConfig = async (output) => {
     const localeWordConfig = createConfigbyMap()
-    console.log('🚀 ~ file: index.js:26 ~ createConfig ~ localeWordConfig:', localeWordConfig);
-    const { path, filename } = output || globalSetting.output
+    const { path: dir, filename } = output || globalSetting.output
     let content = {}
     for (const key in localeWordConfig) {
         if (Object.prototype.hasOwnProperty.call(localeWordConfig, key)) {
@@ -33,7 +44,16 @@ const createConfig = (output) => {
     }
     updateConfig(content)
     content = JSON.stringify(content)
-    createFile({content, path, filename})
+
+    // 把正在写配置的操作中断了，使用最新的写操作
+    writeTaskStash.forEach(ctrl => {
+        ctrl.abort()
+    })
+    setWriteTaskStash([])
+    const controller = new AbortController()
+    const { signal } = controller
+    pushWriteTaskStash(controller)
+    writeFile(path.resolve(cwd(), dir, filename), content, { signal })
 }
 
 /**
@@ -43,7 +63,7 @@ const createConfig = (output) => {
 const createSourceMap = ({path, filename}) => {
     let mapSource = getResource()
     mapSource = JSON.stringify(mapSource)
-    createFile({content: mapSource, path, filename})
+    createFileWidthPath({content: mapSource, path, filename})
 }
 
 /**
@@ -67,20 +87,19 @@ const handleTranslate = async (translation) => {
 const initOption = (options) => {
     const {
         output,
-        watch,
         sourceMap,
         translate,
     } = options || {}
 
-    let watchConfig = {
-        on: false,
-    }
-    if (typeof watch === 'boolean') {
-        watchConfig.on = watch
-    } else if (watch) {
-        const { on } = watch
-        watchConfig.on = !!on
-    }
+    // let watchConfig = {
+    //     on: false,
+    // }
+    // if (typeof watch === 'boolean') {
+    //     watchConfig.on = watch
+    // } else if (watch) {
+    //     const { on } = watch
+    //     watchConfig.on = !!on
+    // }
 
     let sourceMapConfig = {
         on: false,
@@ -107,7 +126,6 @@ const initOption = (options) => {
 
     return {
         output,
-        watch: watchConfig,
         sourceMap: sourceMapConfig,
         translate: translateConfig,
     }
@@ -119,14 +137,43 @@ const initOption = (options) => {
  * @param {Object} sourceMap
  * @param {Boolean} fileChange - Wether the file should update
  */
-const createEmit = ({output, sourceMap, translate}, fileChange) => {
+const createEmit = async ({output, sourceMap, translate}, fileChange) => {
     const {
         configNeedUpdate,
         sourceMapNeedUpdate,
     } = fileChange
-    console.log('🚀 ~ file: index.js:126 ~ createEmit ~ configNeedUpdate:', configNeedUpdate);
     if (configNeedUpdate) {
-        createConfig(output)
+        // 防抖
+        // 对生成配置文件的写操作进行防抖
+        const debounceWrite = () => {
+            if (wirteTaskTimer) {
+                clearTimeout(wirteTaskTimer)
+            }
+            const timer = setTimeout(() => {
+                createConfig(output)
+                setWirteTaskTimer(null)
+            }, 300)
+            setWirteTaskTimer(timer)
+        }
+
+        if (!outDirCreated) {
+            if (mkdiring) {
+                setHasDirAfterWriteConfigTask(true)
+            }
+            try {
+                setMkdiring(true)
+                const { path } = output || globalSetting.output
+                await mkdir(path, { recursive: true })
+                setOutDirCreated(true)
+                // 创建文件夹过程中有需要创建本地配置文件的情况，在创建时被中断了，所以在创建结束后再执行一次
+                hasDirAfterWriteConfigTask && debounceWrite()
+            } catch (err) {
+                console.error('🚀 ~ file: index.js:143 ~ createEmit ~ err:', err.message);
+            }
+            setMkdiring(false)
+        }
+        
+        debounceWrite()
     }
 
     if (!translating) {
@@ -148,28 +195,16 @@ const createEmit = ({output, sourceMap, translate}, fileChange) => {
 const generateJson = (options) => {
     const {
         output,
-        watch,
         sourceMap,
         translate,
     } = initOption(options);
-
-    const handleData = () => {
-        const fileChange = updateResourceMap()
-        setCompiledFiles([])
-        setCompileDone(true)
-        createEmit({
-            output,
-            sourceMap,
-            translate
-        }, fileChange)
-    }
-
-    if (!once) {
-        handleData()
-        once = true
-    } else if (watch.on) {
-        handleData()
-    }
+    
+    const fileChange = updateResourceMap()
+    createEmit({
+        output,
+        sourceMap,
+        translate
+    }, fileChange)
 }
 
 export default generateJson;

@@ -1,12 +1,12 @@
 const rootPath = process.cwd()
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
 
 export let globalSetting = {}
 let localeWordConfig = {}
+let lastLocaleWordConfig = {}
 const resourceMap = {}
 let currentCompileResourceMap = {}
-let compiledFiles = []
-let firstCompileDone = false
 
 /**
  * Initialize
@@ -17,7 +17,6 @@ function init () {
         path: path.resolve(rootPath, './lang')
     }
     const defaultSetting = {
-        entry: { ...defaultFile },
         output: { ...defaultFile },
         localePattern: /[\u4e00-\u9fa5]/, // chinese
         keyRule: null,
@@ -40,10 +39,8 @@ function init () {
     }
 
     try {
-        const setting = require(rootPath + '/i18nauto.config.js')
-        if (setting.entry && !setting.output) {
-            Object.assign(defaultSetting.output, setting.entry)
-        }
+        let setting = readFileSync(rootPath + '/i18nauto.config.js', { encoding: 'utf8' })
+        setting = JSON.parse(setting)
         for (const key in defaultSetting) {
             if (!setting[key]) {
                 continue
@@ -64,20 +61,21 @@ function init () {
     }
     globalSetting = defaultSetting
 
-    const {path: entryPath, filename} = globalSetting.entry
-    const entryFile = path.resolve(entryPath, filename)
-    globalSetting.entryFile = entryFile
+    const {path: outputPath, filename} = globalSetting.output
+    const outputFile = path.resolve(outputPath, filename)
     
     try {
-        const exsitConfig = require(entryFile)
+        let exsitConfig = readFileSync(outputFile, { encoding: 'utf8' })
+        exsitConfig = JSON.parse(exsitConfig)
         for (const key in exsitConfig) {
             if (!Object.prototype.hasOwnProperty.call(exsitConfig, key)) {
                 return
             }
             localeWordConfig[key] = exsitConfig[key]
+            lastLocaleWordConfig[key] = exsitConfig[key]
         }
     } catch (e) {
-        console.error('There is no locale keyword file ' + entryFile)
+        console.error('There is no locale keyword file ' + outputFile)
     }
 }
 init()
@@ -97,17 +95,18 @@ const addConfig = (key, value) => {
  */
 const defaultKeyRule = (value) => {
     const max = (Object.keys(localeWordConfig).sort((a,b) => b-a))[0]
+    let key = ''
     let isAdded = false
     for (let i = 0; i < max; i++) {
         if (!localeWordConfig[i]) {
             localeWordConfig[i] = value
             isAdded = true
-            currentKey = (i + '')
+            key = (i + '')
             break
         }
     }
     if (isAdded) {
-        return currentKey
+        return key
     } else {
         const len = Object.keys(localeWordConfig).length
         return addConfig(len, value)
@@ -130,7 +129,8 @@ export const setConfig = (value) => {
 }
 
 export const updateConfig = (value) => {
-    localeWordConfig = value
+    localeWordConfig = JSON.parse(JSON.stringify(value))
+    lastLocaleWordConfig = JSON.parse(JSON.stringify(value))
 }
 
 export const getKey = (value) => {
@@ -147,7 +147,7 @@ export const getKey = (value) => {
     return currentKey
 }
 
-export const setCurrentCompileResourceMap = (path, collection, keyInCodes) => {
+export const setCurrentCompileResourceMap = (file, collection, keyInCodes) => {
     let config = {}
     if (keyInCodes.length) {
         keyInCodes.forEach(key => {
@@ -163,7 +163,7 @@ export const setCurrentCompileResourceMap = (path, collection, keyInCodes) => {
                 config[key].count++
             }
         })
-    } else if (collection.length === 0 && !firstCompileDone) {
+    } else if (collection.length === 0 && !resourceMap[file]) {
         return
     }
     
@@ -179,33 +179,27 @@ export const setCurrentCompileResourceMap = (path, collection, keyInCodes) => {
             config[key].count++
         }
     })
-    if (compiledFiles.includes(path)) {
-        const temp = currentCompileResourceMap[path] || {}
-        for (const key in temp) {
-            if (config[key]) {
-                config[key].count += temp[key].count
-            } else {
-                config[key] = temp[key]
-            }
-        }
-    }
 
-    currentCompileResourceMap[path] = config
+    currentCompileResourceMap[file] = config
 }
+
 export const updateResourceMap = () => {
     let configNeedUpdate = false
     let sourceMapNeedUpdate = false
     
-    for (const path in currentCompileResourceMap) {
-        const newPathtMap = currentCompileResourceMap[path]
-        const lastPathMap = resourceMap[path]
+    // Handle resouce map
+    for (const file in currentCompileResourceMap) {
+        const newPathtMap = currentCompileResourceMap[file]
+        const lastPathMap = resourceMap[file]
 
-        if (!configNeedUpdate && firstCompileDone) {
+        // Determine whether the resource map file needs to be updated
+        if (!configNeedUpdate) {
             const newKeys = Object.keys(newPathtMap)
             const oldKeys = lastPathMap ? Object.keys(lastPathMap) : []
             if ((newKeys.length !== oldKeys.length) || (oldKeys.join('+') !== newKeys.join('+'))) {
-                configNeedUpdate = true
                 sourceMapNeedUpdate = true
+                // When the file delete the word after the file has been transformed (Not first transform)
+                lastPathMap && (configNeedUpdate = true)
             } else {
                 for (const key in newPathtMap) {
                     if (newPathtMap[key].count !== lastPathMap[key].count) {
@@ -216,36 +210,28 @@ export const updateResourceMap = () => {
             }
         }
 
+        // Update resouceMap
         if (JSON.stringify(newPathtMap) === '{}') {
             if (lastPathMap) {
-                delete resourceMap[path]
+                delete resourceMap[file]
             }
         } else {
-            resourceMap[path] = newPathtMap
+            resourceMap[file] = newPathtMap
         }
     }
     currentCompileResourceMap = {}
     
-    if (!firstCompileDone) {
+    // Handle config
+    if (!configNeedUpdate) {
         const newConfig = createConfigbyMap()
-        let oldConfig = {}
-        try {
-            oldConfig = require(globalSetting.entryFile)
-            if (Object.keys(newConfig).length !== Object.keys(oldConfig).length) {
+        for (const key in newConfig) {
+            if (newConfig[key].value !== lastLocaleWordConfig[key]) {
                 configNeedUpdate = true
-            } else {
-                for (const key in newConfig) {
-                    if (newConfig[key].value !== oldConfig[key]) {
-                        configNeedUpdate = true
-                        break
-                    }
-                }
+                break
             }
-        } catch (e) {
-            configNeedUpdate = true
         }
-        sourceMapNeedUpdate = true
     }
+    
 
     return {
         configNeedUpdate,
@@ -264,26 +250,6 @@ export const getResource = (path) => {
     } else {
         return JSON.parse(JSON.stringify(resourceMap))
     }
-}
-
-export const addCompiledFiles = (path) => {
-    compiledFiles.includes(path) || compiledFiles.push(path)
-}
-
-const getCompiledFiles = (resourcePath) => {
-    return resourcePath ? compiledFiles.includes(resourcePath) : compiledFiles.concat()
-}
-
-export const setCompiledFiles = (val) => {
-    compiledFiles = val
-}
-
-export const setCompileDone = (val) => {
-    firstCompileDone = val
-}
-
-export const getCompileDone = () => {
-    return firstCompileDone
 }
 
 export const createConfigbyMap = () => {

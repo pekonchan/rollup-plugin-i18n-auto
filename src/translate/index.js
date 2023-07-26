@@ -11,7 +11,7 @@ const {
     source,
     projectId,
 } = globalSettingTranslate || {}
-import { createFile } from '../common/utils.js';
+import { createFileWidthPath } from '../common/utils.js';
 
 import tencentcloud from 'tencentcloud-sdk-nodejs-tmt';
 const TmtClient = tencentcloud.tmt.v20180321.Client
@@ -178,13 +178,13 @@ const createTranslate = (target, source, needFile = true) => {
                         Object.assign(langConfig, translateRes)
                         
                         translationFileParam.content = JSON.stringify(langConfig)
-                        needFile && createFile(translationFileParam)
+                        needFile && createFileWidthPath(translationFileParam)
                         result[item] = langConfig
                     } catch (e) {
                         return reject(e)
                     }
                 } else if (deletedKeys.length) {
-                    needFile && createFile(translationFileParam)
+                    needFile && createFileWidthPath(translationFileParam)
                 }
                 index++
                 if (index < lang.length) {

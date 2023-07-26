@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-export const createFile = ({
+export const createFileWidthPath = ({
     content, path: fileDir, filename
 }) => {
     return new Promise((resolve, reject) => [
