@@ -9,9 +9,10 @@ const resourceMap = {}
 let currentCompileResourceMap = {}
 
 /**
- * Initialize
+ * Init setting
+ * @param {Object} setting 
  */
-function init () {
+function initSetting (setting) {
     const defaultFile = {
         filename: 'zh.json',
         path: path.resolve(rootPath, './lang')
@@ -20,50 +21,86 @@ function init () {
         output: { ...defaultFile },
         localePattern: /[\u4e00-\u9fa5]/, // chinese
         keyRule: null,
-        translate: {
-            on: false,
-            lang: ['en'],
-            path: defaultFile.path,
-            nameRule (lang) {
-                return `${lang}.json`
-            },
-            startTotal: 0,
-            endTotal: 5000000,
-            secretId: '', // If translate on, secretId is required
-            secretKey: '', // If translate on, secretKey is required
-            region: 'ap-beijing',
-            endpoint: 'tmt.tencentcloudapi.com',
-            source: 'zh',
-            projectId: 0
+        include: undefined,
+        exclude: undefined,
+        name: '',
+        dependency: undefined,
+        alias: [],
+        sourceMap: false,
+        transform: true,
+        translate: false,
+    }
+
+    for (const key in defaultSetting) {
+        if (!setting[key]) {
+            continue
+        }
+        const value = defaultSetting[key]
+        if (value && value.constructor === Object) {
+            Object.assign(defaultSetting[key], setting[key])
+        } else {
+            defaultSetting[key] = setting[key]
         }
     }
 
-    try {
-        let setting = readFileSync(rootPath + '/i18nauto.config.js', { encoding: 'utf8' })
-        setting = JSON.parse(setting)
-        for (const key in defaultSetting) {
-            if (!setting[key]) {
-                continue
-            }
-            const value = defaultSetting[key]
-            if (value && value.constructor === Object) {
-                Object.assign(defaultSetting[key], setting[key])
-            } else {
-                defaultSetting[key] = setting[key]
-            }
-        }
-        // 如果设置开启翻译，且 没指定生成翻译文件的地址，则保持跟output的地址一致
-        if (defaultSetting.translate.on && !setting.translate.path) {
-            defaultSetting.translate.path = defaultSetting.output.path
-        }
-    } catch (e) {
-        console.warn('Lack of "i18nauto.config.js" file, use the default config...')
+    const { sourceMap, translate } = setting
+    // resourcemap setting
+    let defaultSourceMapConfig = {
+        on: false,
+        path: path.resolve(rootPath, './lang'),
+        filename: 'zh.sourcemap.json'
     }
+    if (typeof sourceMap === 'boolean') {
+        defaultSourceMapConfig.on = sourceMap
+    } else if (sourceMap) {
+        const { on, path, filename } = sourceMap
+        defaultSourceMapConfig.on = !!on
+        path && (defaultSourceMapConfig.path = path)
+        filename && (defaultSourceMapConfig.filename = filename)
+    }
+    defaultSetting.sourceMap = defaultSourceMapConfig
+
+    // translate setting
+    let defaultTranslateConfig = {
+        on: false,
+        lang: ['en'],
+        path: defaultFile.path,
+        nameRule (lang) {
+            return `${lang}.json`
+        },
+        startTotal: 0,
+        endTotal: 5000000,
+        secretId: '', // If translate on, secretId is required
+        secretKey: '', // If translate on, secretKey is required
+        region: 'ap-beijing',
+        endpoint: 'tmt.tencentcloudapi.com',
+        source: 'zh',
+        projectId: 0
+    }
+    if (typeof translate === 'boolean') {
+        defaultTranslateConfig.on = translate
+    } else if (translate) {
+        for (const setting in translate) {
+            defaultTranslateConfig[setting] = translate[setting]
+        }
+    }
+    defaultSetting.translate = defaultTranslateConfig
+    // 如果设置开启翻译，且 没指定生成翻译文件的地址，则保持跟output的地址一致
+    if (defaultSetting.translate.on && !setting.translate.path) {
+        defaultSetting.translate.path = defaultSetting.output.path
+    }
+
     globalSetting = defaultSetting
+}
 
+/**
+ * Init locale word config
+ * @returns 
+ */
+function initWordConfig () {
     const {path: outputPath, filename} = globalSetting.output
     const outputFile = path.resolve(outputPath, filename)
-    
+    console.log('🚀 ~ file: collect.js:103 ~ initWordConfig ~ outputFile:', outputFile);
     try {
         let exsitConfig = readFileSync(outputFile, { encoding: 'utf8' })
         exsitConfig = JSON.parse(exsitConfig)
@@ -78,7 +115,19 @@ function init () {
         console.error('There is no locale keyword file ' + outputFile)
     }
 }
-init()
+
+/**
+ * Initialize
+ */
+export default function init (options) {
+    initSetting(options)
+    initWordConfig()
+
+    return {
+        localeWordConfig,
+        setting: globalSetting,
+    }
+}
 
 const addConfig = (key, value) => {
     if (localeWordConfig[key]) {

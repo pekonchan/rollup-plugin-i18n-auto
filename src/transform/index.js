@@ -9,7 +9,6 @@ import {
 import {
     setConfig,
     setCurrentCompileResourceMap,
-    globalSetting,
 } from '../common/collect.js'
 
 export default function i18nTransform ({id, code}, options) {
@@ -21,6 +20,7 @@ export default function i18nTransform ({id, code}, options) {
         alias = [],
         dependency, // {name, value, objectPattern}
         transform = true,
+        localePattern,
     } = options || {}
     
 
@@ -152,7 +152,7 @@ export default function i18nTransform ({id, code}, options) {
             }
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
-                if (globalSetting.localePattern.test(val)) {
+                if (localePattern.test(val)) {
                     const res = localeWordPattern(val)
                     if (res && res.length) {
                         const wordKeyMap = {}
@@ -173,7 +173,7 @@ export default function i18nTransform ({id, code}, options) {
             if (isInConsole(path)) {
                 return
             }
-            const hasWord = path.node.quasis.some(item => globalSetting.localePattern.test(item.value.raw))
+            const hasWord = path.node.quasis.some(item => localePattern.test(item.value.raw))
             if (!hasWord) {
                 return
             }
@@ -217,6 +217,6 @@ export default function i18nTransform ({id, code}, options) {
     const newCode = generator.default(ast, {}, code).code
 
     setCurrentCompileResourceMap(id, collection, keyInCodes) // create the latest collection to this file in sourcemap variable
-    
+
     return newCode
 }

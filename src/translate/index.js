@@ -1,33 +1,9 @@
 import fs from 'node:fs';
-import { globalSetting } from '../common/collect.js';
-const {
-    translate: globalSettingTranslate
-} = globalSetting
-const {
-    secretId,
-    secretKey,
-    region,
-    endpoint,
-    source,
-    projectId,
-} = globalSettingTranslate || {}
+import { globalSetting } from '../common/collect.js'
 import { createFileWidthPath } from '../common/utils.js';
 
 import tencentcloud from 'tencentcloud-sdk-nodejs-tmt';
 const TmtClient = tencentcloud.tmt.v20180321.Client
-
-const clientConfig = {
-    credential: {
-        secretId,
-        secretKey,
-    },
-    region,
-    profile: {
-        httpProfile: {
-            endpoint
-        }
-    }
-}
 
 const translateTo = ({
     target,
@@ -64,7 +40,6 @@ const translateTo = ({
     return timeOutSend(target, secondList, 0)
 }
 
-
 const timeOutSend = (target, secondList, i) => {
     return new Promise((resolve, reject) => {
         const list = secondList[i]
@@ -93,11 +68,30 @@ const timeOutSend = (target, secondList, i) => {
     })
 }
 
-
 /**
  * send the request to translate
  */
 const send = (target, textConfig) => {
+    const {
+        secretId,
+        secretKey,
+        region,
+        endpoint,
+        source,
+        projectId,
+    } = globalSetting.translate || {}
+    const clientConfig = {
+        credential: {
+            secretId,
+            secretKey,
+        },
+        region,
+        profile: {
+            httpProfile: {
+                endpoint
+            }
+        }
+    }
     return new Promise((resolve, reject) => {
         let result = {}
         const keys = Object.keys(textConfig)
@@ -127,9 +121,9 @@ const send = (target, textConfig) => {
 const createTranslate = (target, source, needFile = true) => {
     return new Promise((resolve, reject) => {
         const {
-            path = globalSettingTranslate.path,
-            lang = globalSettingTranslate.lang,
-            nameRule = globalSettingTranslate.nameRule
+            path,
+            lang,
+            nameRule
         } = target
         const {
             path: sourcePath,
@@ -201,7 +195,7 @@ const createTranslate = (target, source, needFile = true) => {
 }
 
 function validateLimit (textConfig) {
-    const { startTotal, endTotal } = globalSettingTranslate
+    const { startTotal, endTotal } = globalSetting.translate || {}
     if (endTotal === Infinity) {
         return true
     }
@@ -213,8 +207,8 @@ function validateLimit (textConfig) {
     if (total > endTotal) {
         return false
     }
-    globalSettingTranslate.startTotal = total
+    globalSetting.translate.startTotal = total
     return true
 }
 
-export default createTranslate;
+export default createTranslate
