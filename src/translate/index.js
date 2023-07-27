@@ -1,4 +1,5 @@
-import fs from 'node:fs';
+import fs from 'node:fs'
+
 import { globalSetting } from '../common/collect.js'
 import { createFileWidthPath } from '../common/utils.js';
 
@@ -129,7 +130,7 @@ const createTranslate = (target, source, needFile = true) => {
             path: sourcePath,
             text,
         } = source
-        const localeConfig = text || require(sourcePath)
+        const localeConfig = text || JSON.parse(fs.readFileSync(sourcePath, { encoding: 'utf8' }))
         const result = {}
         const translateLang = (index) => {
             const item = lang[index]
@@ -144,7 +145,8 @@ const createTranslate = (target, source, needFile = true) => {
                         translateWordConfig[key] = localeConfig[key]
                     }
                 } else {
-                    langConfig = require(filePath)
+                    langConfig = fs.readFileSync(filePath, { encoding: 'utf8' })
+                    langConfig = JSON.parse(langConfig)
                     deletedKeys = Object.keys(langConfig).filter(key => !Object.keys(localeConfig).some(localeKey => localeKey === key))
                     deletedKeys.forEach(key => {
                         delete langConfig[key]
