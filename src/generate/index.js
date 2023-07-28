@@ -6,8 +6,6 @@ import createTranslate from '../translate/index.js';
 import createResouceMap from './resourceMap.js'
 import createLocaleWordConfig from './wordConfig.js'
 
-let translating = false
-
 /**
  * create i18n language config files
  */
@@ -17,36 +15,24 @@ const handleTranslate = async (translation) => {
     for (const key in localeConfigOrigin) {
         localeConfig[key] = localeConfigOrigin[key].value
     }
-    translating = true
     try {
         await createTranslate(translation, {text: localeConfig})
     } catch (e) {
         console.error(e)
     }
-    translating = false
 }
 
-const generateJson = (options) => {
-    const {
-        output,
-        sourceMap,
-        translate,
-    } = options
-    
+export default function (setting) {
+    const { output, translate, mode, sourceMap } = setting
     const { configNeedUpdate, sourceMapNeedUpdate } = updateResourceMap()
 
-    if (configNeedUpdate) {
-        createLocaleWordConfig(output)
-    }
-
-    if (!translating && translate.on) {
+    if (mode === 'build' && translate.on) {
         handleTranslate(translate)
     }
-    
+    if (output.generate && configNeedUpdate) {
+        createLocaleWordConfig(output)
+    }
     if (sourceMap.on && sourceMapNeedUpdate) {
         createResouceMap(sourceMap)
     }
-
 }
-
-export default generateJson;

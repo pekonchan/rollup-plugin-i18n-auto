@@ -18,7 +18,11 @@ function initSetting (setting) {
         path: path.resolve(rootPath, './lang')
     }
     const defaultSetting = {
-        output: { ...defaultFile },
+        mode: 'build',
+        output: {
+            generate: true,
+            ...defaultFile
+        },
         localePattern: /[\u4e00-\u9fa5]/, // chinese
         keyRule: null,
         include: undefined,
@@ -32,7 +36,7 @@ function initSetting (setting) {
     }
 
     for (const key in defaultSetting) {
-        if (!setting[key]) {
+        if (setting[key] === undefined) {
             continue
         }
         const value = defaultSetting[key]
