@@ -1,11 +1,15 @@
 {
   "name": "rollup-plugin-i18n-auto",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "This is a tools to help you work i18n automatically in rollup or vite.",
-  "main": "src/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rollup -c"
   },
   "keywords": [
     "rollup-plugin",
@@ -20,5 +24,8 @@
     "@babel/types": "^7.22.5",
     "@rollup/pluginutils": "^5.0.2",
     "tencentcloud-sdk-nodejs-tmt": "^4.0.643"
+  },
+  "devDependencies": {
+    "rollup": "^3.27.0"
   }
 }

@@ -104,7 +104,6 @@ function initSetting (setting) {
 function initWordConfig () {
     const {path: outputPath, filename} = globalSetting.output
     const outputFile = path.resolve(outputPath, filename)
-    console.log('🚀 ~ file: collect.js:103 ~ initWordConfig ~ outputFile:', outputFile);
     try {
         let exsitConfig = readFileSync(outputFile, { encoding: 'utf8' })
         exsitConfig = JSON.parse(exsitConfig)

@@ -13,6 +13,37 @@ This is a tools to help you work i18n automatically in rollup or vite project.
 
 上述工作分别可单独设置工作与否。
 
+以一份代码为例子进行说明该工具会做了什么事情：
+```
+// 源码 example.js
+const test = '你好'
+
+// 经过工具转化后，源码变成
+import i18n from '/src/i18n/index.js'
+
+const test = i18n.global.t('0')
+
+// 生成了一份JSON文件，里面的内容是：
+{
+  "0": "你好"
+}
+
+// 生成了指定国家的语言包，也是JSON文件，里面内容是：
+{
+  "0": "Hello"
+}
+
+// 还能生成一份映射文件
+{
+  "example.js": {
+    "0": {
+      "value": "你好",
+      "count": 1
+    }
+  }
+}
+```
+
 # Install
 ```
 npm i rollup-plugin-i18n-auto
@@ -94,6 +125,7 @@ i18nAuto({
 最简单的配置如下（具体设置参考各个字段的说明）：
 ```
 i18nAuto({
+  mode: 'serve', // 开发环境中就必须得写serve，否则可不写或写build
   include: ['**.js'], // 针对什么文件进行国际化词条
   output: {
     generate: true // 生成代码词条配置文件，默认为true，不写也可以
@@ -111,11 +143,30 @@ i18nAuto({
 ```
 i18nAuto({
   include: ['**.js'], // 针对什么文件进行国际化词条
+  exclude: ['src/i18n/index.js'], // 排除某个文件，一般国际化依赖的文件需要排除掉的，即下方的dependency.value
   output: {
     generate: false // 生成代码词条配置文件，默认为true，不写也可以
   },
+  i18nCallee: 'i18n.global.t', // 例子
+  dependency: {  // 例子
+    name: 'i18n',
+    value: '/src/i18n/index.js'
+  },
   transform: true // 转译源码，不写也可以，默认是true
 })
+```
+
+例如：
+```
+// 源码
+const test = '你好'
+
+// 经过工具转化后
+import i18n from '/src/i18n/index.js'
+
+const test = i18n.global.t('0')
+
+// 0 是 '你好' 的 key {"0": "你好"}
 ```
 
 ## 仅生成映射文件
@@ -124,6 +175,7 @@ i18nAuto({
 最简单的配置如下（具体设置参考各个字段的说明）：
 ```
 i18nAuto({
+  mode: 'serve', // 开发环境中就必须得写serve，否则可不写或写build
   include: ['**.js'], // 针对什么文件进行国际化词条
   output: {
     generate: false // 生成代码词条配置文件，默认为true，不写也可以
