@@ -5,9 +5,10 @@ This is a tools to help you work i18n automatically in rollup or vite project.
 
 > 该工具的实现思想跟 [i18n-auto-webpack](https://github.com/pekonchan/i18n-auto-webpack) 是一样的，这个是rollup版本。具体实现思想与初衷见 [我搞了个可以全自动化国际化的工具...](https://juejin.cn/post/7209967260898525242)
 
+# 优点
 该工具能够帮助你自动完成以下工作：
 1. 收集需要进行国际化的词条，生成JSON配置文件
-2. 自动转换源码中的需要国际化的词条，而无须你改动源码上的词条，会在代码编译阶段自动完成该操作
+2. 自动转换源码中的需要国际化的词条，而无须你改动源码上的词条，会在代码编译阶段自动完成该操作。意味着开发者不需要改变自己的开发习惯，并保留源码的良好阅读性
 3. 支持自动根据生成的JSON词条配置文件，翻译成指定的其他国家语言，生成对应的JSON配置文件
 4. 支持生成每个文件中有哪些国际化词条，并且条数是多少的source map JSON文件。
 
