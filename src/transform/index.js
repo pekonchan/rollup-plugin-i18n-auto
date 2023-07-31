@@ -16,7 +16,7 @@ export default function i18nTransform ({id, code}, options) {
     const keyInCodes = []
     let loadedDependency = false
     const {
-        name = '',
+        i18nCallee = '',
         alias = [],
         dependency, // {name, value, objectPattern}
         transform = true,
@@ -121,7 +121,7 @@ export default function i18nTransform ({id, code}, options) {
             recurName(path.node.callee)
             wholeCallName = wholeCallName.substring(1)
             let i18nFnNames = [...alias]
-            i18nFnNames.unshift(name)
+            i18nFnNames.unshift(i18nCallee)
             i18nFnNames.forEach(fnName => {
                 let matched = false
                 if (Object.prototype.toString.call(fnName) === '[object RegExp]') {
@@ -161,7 +161,7 @@ export default function i18nTransform ({id, code}, options) {
                             collection.push({[key]: word})
                             wordKeyMap[word] = key
                         })
-                        transform && transCode({path, originValue: val, wordKeyMap, calle: name})
+                        transform && transCode({path, originValue: val, wordKeyMap, calle: i18nCallee})
                     }
                 }
             }

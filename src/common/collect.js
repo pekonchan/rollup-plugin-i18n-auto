@@ -27,7 +27,7 @@ function initSetting (setting) {
         keyRule: null,
         include: undefined,
         exclude: undefined,
-        name: '',
+        i18nCallee: '',
         dependency: undefined,
         alias: [],
         sourceMap: false,
