@@ -17,6 +17,7 @@
   ],
   "author": "pekonchan",
   "license": "ISC",
+  "homepage": "https://github.com/pekonchan/rollup-plugin-i18n-auto#readme",
   "dependencies": {
     "@babel/generator": "^7.22.9",
     "@babel/parser": "^7.22.7",
