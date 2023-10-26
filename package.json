@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-i18n-auto",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "This is a tools to help you work i18n automatically in rollup or vite.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
