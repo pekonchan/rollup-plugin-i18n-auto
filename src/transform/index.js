@@ -55,6 +55,22 @@ export default function i18nTransform ({id, code}, options) {
         }
         return (check(leadingComments) || check(ast.comments))
     }
+    /**
+     * vue file special rule to disable transform
+     * @param {Object} path 
+     * @returns {Boolean} true means disabled
+     */
+    function matchVueFileSpecialRule (path) {
+        const pathParent = path.parent
+        if (/\.vue$/.test(id)
+            && pathParent.type === 'CallExpression'
+            && pathParent.callee.type === 'Identifier'
+            && pathParent.callee.name === '_createCommentVNode'
+        ) {
+            return true
+        }
+        return false
+    }
 
     const visitor = {
         // Finds if the user's dependency is in the import declaration
@@ -150,6 +166,11 @@ export default function i18nTransform ({id, code}, options) {
             if (isInConsole(path)) {
                 return
             }
+
+            if (matchVueFileSpecialRule(path)) {
+                return
+            }
+            
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
                 if (localePattern.test(val)) {
