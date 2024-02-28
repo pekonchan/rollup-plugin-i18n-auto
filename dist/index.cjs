@@ -520,6 +520,22 @@ function transCode ({path, originValue, wordKeyMap, calle}) {
     }
 }
 
+function getParent (path, deep = 1) {
+    if (deep > 1) {
+        let tempPath = path;
+        for (let i = 0; i < deep - 1; i++) {
+            tempPath = tempPath.parentPath;
+        }
+        try {
+            return tempPath.parent
+        } catch (e) {
+            return undefined
+        }
+    } else {
+        return path.parent
+    }
+}
+
 function i18nTransform ({id, code}, options) {
     const collection = [];
     const keyInCodes = [];
@@ -577,6 +593,22 @@ function i18nTransform ({id, code}, options) {
             && pathParent.callee.name === '_createCommentVNode'
         ) {
             return true
+        }
+        // vue file has special sfc render export function
+        if (/\.vue$/.test(id) && pathParent.type === 'ArrayExpression') {
+            const firstElement = pathParent.elements[0];
+            if (firstElement.type === 'StringLiteral' && firstElement.value === '__file') {
+                const theParent = getParent(path, 2);
+                if (theParent && theParent.type === 'ArrayExpression') {
+                    const theParent2 = getParent(path, 3);
+                    if (theParent2 && theParent2.type === 'CallExpression') {
+                        const theParent3 = getParent(path, 4);
+                        if (theParent2.callee.name === '_export_sfc' && theParent3 && theParent3.type === 'ExportDefaultDeclaration') {
+                            return true
+                        }
+                    }
+                }
+            }
         }
         return false
     }
@@ -675,14 +707,13 @@ function i18nTransform ({id, code}, options) {
             if (isInConsole(path)) {
                 return
             }
-
-            if (matchVueFileSpecialRule(path)) {
-                return
-            }
             
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value;
                 if (localePattern.test(val)) {
+                    if (matchVueFileSpecialRule(path)) {
+                        return
+                    }
                     const res = localeWordPattern(val);
                     if (res && res.length) {
                         const wordKeyMap = {};
