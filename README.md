@@ -45,6 +45,9 @@ const test = i18n.global.t('0')
 }
 ```
 
+# demo
+[这里有个demo工程](https://github.com/pekonchan/rollup-plugin-i18n-auto-demo)
+
 # Install
 ```
 npm i rollup-plugin-i18n-auto
