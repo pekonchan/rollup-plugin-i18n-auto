@@ -739,21 +739,25 @@ function i18nTransform ({id, code}, options) {
             let sections = path.node.expressions.map(node => {
                 return {
                     start: node.start,
-                    value: generator.default(node).code
+                    value: `(${generator.default(node).code})`
                 }
             });
             path.node.quasis.forEach(node => {
                 const string = node.value.raw;
                 if (string) {
+                    const _string = string.replace(/"/g, '\\"');
                     const element = {
                         start: node.start,
-                        value: '"' + string + '"'
+                        value: '"' + _string + '"'
                     };
                     const unshiftIndex = sections.findIndex(item => node.start < item.start);
                     unshiftIndex === -1 ? sections.push(element) : sections.splice(unshiftIndex, 0, element);
                 }
             });
-            const code = sections.map(item => item.value).join('+');
+            let code = sections.map(item => item.value).join('+');
+            code.indexOf('\n') !== -1 && (code = code.replace(/\n/g, '\\n'));
+            code.indexOf('\r') !== -1 && (code = code.replace(/\r/g, '\\r'));
+            code.indexOf('\t') !== -1 && (code = code.replace(/\t/g, '\\t'));
             path.replaceWithSourceString(code);
         }
     };
