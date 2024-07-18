@@ -188,7 +188,7 @@ export default function i18nTransform ({id, code}, options) {
             })
         },
         StringLiteral (path) {
-            if (path.parent.type === 'ImportDeclaration') {
+            if (['ExportAllDeclaration', 'ImportDeclaration', 'ExportNamedDeclaration'].indexOf(path.parent.type) !== -1) {
                 return
             }
             if (findCommentExclude(path)) {
