@@ -286,10 +286,14 @@ const updateResourceMap = () => {
     // Handle config
     if (!configNeedUpdate) {
         const newConfig = createConfigbyMap();
-        for (const key in newConfig) {
-            if (newConfig[key].value !== lastLocaleWordConfig[key]) {
-                configNeedUpdate = true;
-                break
+        if (Object.keys(newConfig).length !== Object.keys(lastLocaleWordConfig).length) {
+            configNeedUpdate = true;
+        } else {
+            for (const key in newConfig) {
+                if (newConfig[key].value !== lastLocaleWordConfig[key]) {
+                    configNeedUpdate = true;
+                    break
+                }
             }
         }
     }
@@ -697,7 +701,7 @@ function i18nTransform ({id, code}, options) {
             });
         },
         StringLiteral (path) {
-            if (path.parent.type === 'ImportDeclaration') {
+            if (['ExportAllDeclaration', 'ImportDeclaration', 'ExportNamedDeclaration'].indexOf(path.parent.type) !== -1) {
                 return
             }
             if (findCommentExclude(path)) {
